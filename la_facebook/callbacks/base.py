@@ -34,7 +34,7 @@ class BaseFacebookCallback(object):
             else:
                 logger.debug("BaseFacebookCallback.__call__:'\
                    existing django user found for this facebook identifier")
-                ret = self.handle_unauthenticated_user(request, user, access, 
+                ret = self.handle_unauthenticated_user(request, user, access,
                         token, user_data)
             if isinstance(ret, HttpResponse):
                 return ret
@@ -55,7 +55,7 @@ class BaseFacebookCallback(object):
     def lookup_user(self, request, access, user_data):
         raise NotImplementedError("Callbacks must have a lookup_user method")
 
-    def redirect_url(self, request, fallback_url=settings.LOGIN_REDIRECT_URL, 
+    def redirect_url(self, request, fallback_url=settings.LOGIN_REDIRECT_URL,
             redirect_field_name="next", session_key_value="redirect_to"):
         """
         Returns the URL to be used in login procedures by looking at different
@@ -73,10 +73,18 @@ class BaseFacebookCallback(object):
             if hasattr(request, "session"):
                 redirect_to = request.session.get(session_key_value)
                 # Heavier security check -- don't allow redirection to a different host.
-                netloc = urlparse.urlparse(redirect_to)[1]
-                if netloc and netloc != request.host:
-                    logger.warning("redirect_to host does not match orgin")
-                    redirect_to = fallback_url
+                if redirect_to:
+                    netloc = urlparse.urlparse(redirect_to)[1]
+                    if netloc and netloc != request.host:
+                        logger.warning("redirect_to host does not match orgin")
+                        redirect_to = fallback_url
+                else:
+                    # There ought to have been a value in the session. This
+                    # is probably a developer error, so log a warning.
+                    logger.warning("Session found, but no redirect_to. Check "
+                                   "that you have set up the facebook_login "
+                                   "view with a 'next' querystring "
+                                   "parameter. Using fallback.")
         if not redirect_to:
             logger.debug("no redirect found, using fallback")
             redirect_to = fallback_url

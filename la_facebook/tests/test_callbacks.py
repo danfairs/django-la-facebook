@@ -11,7 +11,9 @@ try:
 except ImportError:
     raise ImportError("callback tests require Django > 1.3 for RequestFactory")
 
+from django.conf import settings
 from django.contrib.auth.models import User, AnonymousUser
+from django.contrib.sessions.middleware import SessionMiddleware
 
 from la_facebook.access import OAuthAccess, OAuth20Token
 from la_facebook.callbacks.base import BaseFacebookCallback
@@ -55,6 +57,28 @@ class BaseCallbackTests(TestCase):
         callback = BaseFacebookCallback()
         resp = callback.redirect_url(self.request)
         self.assertEquals(resp,'dummy')
+
+    def test_redirect_url_no_next_no_session(self):
+        request = factory.get('/callback')
+        callback = BaseFacebookCallback()
+        resp = callback.redirect_url(request)
+        self.assertEquals(resp, settings.LOGIN_REDIRECT_URL)
+
+    def test_redirect_url_no_next_session(self):
+        request = factory.get('/callback')
+        callback = BaseFacebookCallback()
+        SessionMiddleware().process_request(request)
+        callback = BaseFacebookCallback()
+        resp = callback.redirect_url(request)
+        self.assertEquals(resp, settings.LOGIN_REDIRECT_URL)
+
+    def test_redirect_url_in_session(self):
+        request = factory.get('/callback')
+        SessionMiddleware().process_request(request)
+        request.session['redirect_to'] = 'session_redirect'
+        callback = BaseFacebookCallback()
+        resp = callback.redirect_url(request)
+        self.assertEquals(resp, 'session_redirect')
 
     def test_identifier_from_data(self):
         callback = BaseFacebookCallback()
